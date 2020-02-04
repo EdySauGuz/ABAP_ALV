@@ -1,0 +1,60 @@
+*&---------------------------------------------------------------------*
+*& Include          ZRE_AUDIT_TRAIL_O01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*& Module STATUS_0001 OUTPUT
+*&---------------------------------------------------------------------*
+* Asignar estatus a pantalla 0001.
+
+MODULE status_0001 OUTPUT.
+
+  SET PF-STATUS 'GUI_0001'.
+  SET TITLEBAR 'T0001'.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*& Module ARMAR_ALV_0001 OUTPUT
+*&---------------------------------------------------------------------*
+*& Armar ALV para pantalla 0001.
+*&---------------------------------------------------------------------*
+MODULE armar_alv_0001 OUTPUT.
+
+  IF og_custom_container IS INITIAL.
+
+*    Armar Catalogo de campos.
+    PERFORM armar_catalogo_campos
+    USING 'ZES_AUDIT_TRAIL'
+    CHANGING tg_fieldcatc.
+
+*    Definir layout.
+    PERFORM f_definir_layout_alv.
+
+    CREATE OBJECT og_custom_container
+    EXPORTING
+      container_name = og_container.
+
+    CREATE OBJECT og_grid
+    EXPORTING
+      i_parent = og_custom_container.
+
+*    Llamando método para salida de ALV.
+    CALL METHOD og_grid->set_table_for_first_display
+    EXPORTING
+      is_layout         = sg_layoutc
+      i_structure_name  = 'ZES_AUDIT_TRAIL'
+      i_save            = 'A'
+    CHANGING
+      it_fieldcatalog   = tg_fieldcatc[]
+      it_outtab         = tg_alv.
+
+  ELSE.
+
+*  Refrescar ALV.
+    CALL METHOD og_grid->refresh_table_display
+    EXCEPTIONS
+      finished  = 1
+      OTHERS    = 2.
+
+  ENDIF.
+
+ENDMODULE.
