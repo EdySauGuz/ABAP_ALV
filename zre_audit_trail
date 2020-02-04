@@ -1,0 +1,23 @@
+*&---------------------------------------------------------------------*
+*& Report ZRE_AUDIT_TRAIL
+*&---------------------------------------------------------------------*
+*& Reporte Audit Trail.
+*&---------------------------------------------------------------------*
+INCLUDE:
+  zre_audit_trail_top, " Definición de variables y pantalla de selección.
+  zre_audit_trail_f01, " Definición de rutinas.
+  zre_audit_trail_o01, " Procesos antes de salida.
+  zre_audit_trail_i01. " Procesos después de entrada.
+
+START-OF-SELECTION.
+
+* Realizar selección de datos.
+PERFORM f_obtener_datos.
+
+* Llenar tabla para reporte.
+PERFORM f_llenar_reporte.
+
+END-OF-SELECTION.
+
+* Imprimir reporte.
+PERFORM f_imprimir_reporte.
