@@ -1,0 +1,966 @@
+*&---------------------------------------------------------------------*
+*& Include          ZRE_AUDIT_TRAIL_TOP
+*&---------------------------------------------------------------------*
+REPORT zre_audit_trail
+NO STANDARD PAGE HEADING.
+
+TABLES:
+  mara,
+  stko,
+  plmk,
+  afko,
+  kna1,
+  lfa1,
+  ekko,
+  vbak,
+  qals,
+  mcha.
+
+TYPES:
+
+  BEGIN OF ty_cdhdr,
+    objectclas  TYPE cdhdr-objectclas,  " Clase de objeto.
+    objectid    TYPE cdhdr-objectid,    " Valor de objeto.
+    changenr    TYPE cdhdr-changenr,    " No. de modificación del documento.
+    username    TYPE cdhdr-username,    " Nombre de usuario que modifica.
+    udate       TYPE cdhdr-udate,       " Fecha de modificación.
+    utime       TYPE cdhdr-utime,       " Hora de modificación.
+    tcode       TYPE cdhdr-tcode,       " Código de transacción donde se efectuo.
+    change_ind  TYPE cdhdr-change_ind,  " Tipo de cambio ('U' = Modificación, 'I' = Inserción, etc.).
+  END OF ty_cdhdr,
+
+  BEGIN OF ty_cdpos,
+    objectclas  TYPE cdpos-objectclas,  " Clase de objeto.
+    objectid    TYPE cdpos-objectid,    " Valor de objeto.
+    changenr    TYPE cdpos-changenr,    " No. de modificación del documento.
+    tabname     TYPE cdpos-tabname,     " Nombre de tabla.
+    tabkey      TYPE cdpos-tabkey,      " Claves de linea modificada.
+    fname       TYPE cdpos-fname,       " Nombre del campo.
+    chngind     TYPE cdpos-chngind,     " Tipo de cambio/Clase de modificación.
+    unit_old    TYPE cdpos-unit_old,    " UM anterior.
+    cuky_old    TYPE cdpos-cuky_old,    " Moneda anterior.
+    value_old   TYPE cdpos-value_old,   " Valor anterior.
+    unit_new    TYPE cdpos-unit_new,    " UM nuevo.
+    cuky_new    TYPE cdpos-cuky_new,    " Moneda nuevo.
+    value_new   TYPE cdpos-value_new,   " Valor nuevo.
+  END OF ty_cdpos,
+
+  BEGIN OF ty_jcds,
+    objnr   TYPE jcds-objnr,  " No. Objeto.
+    stat    TYPE jcds-stat,   " Cod. Estatus.
+    usnam   TYPE jcds-usnam,  " Usuario
+    udate   TYPE jcds-udate,  " Fecha de modif.
+    utime   TYPE jcds-utime,  " Hora de modif.
+    cdtcode TYPE jcds-cdtcode,  " Cod. de transacción donde se efectuo.
+    inact   TYPE jcds-inact,  " Indicador de inactivo/borrado.
+    chind   TYPE jcds-chind,  " Tipo de cambio.
+  END OF ty_jcds,
+
+  BEGIN OF ty_tj02t,
+    istat TYPE tj02t-istat, " Cod. de Estatus.
+    txt04 TYPE tj02t-txt04, " Texto abreviado.
+    txt30 TYPE tj02t-txt30, " Texto de Estatus.
+  END OF ty_tj02t,
+
+  BEGIN OF ty_tstct,
+    tcode TYPE tstct-tcode, " Cod. de Transacción.
+    ttext TYPE tstct-ttext, " Texto.
+  END OF ty_tstct.
+
+*Tablas internas.
+DATA:
+      tg_cdhdr      TYPE STANDARD TABLE OF ty_cdhdr,
+      tg_cdpos      TYPE STANDARD TABLE OF ty_cdpos,
+      tg_jcds       TYPE STANDARD TABLE OF ty_jcds,
+      tg_tj02t      TYPE STANDARD TABLE OF ty_tj02t,
+      tg_tstct      TYPE STANDARD TABLE OF ty_tstct,
+      tg_fieldcatc  TYPE lvc_t_fcat,
+      tg_reporte    TYPE ztt_audit_trail,
+      tg_alv        TYPE STANDARD TABLE OF zes_audit_trail.
+
+*Tablas temporales.
+DATA:
+      wa_cdhdr      TYPE ty_cdhdr,
+      wa_cdpos      TYPE ty_cdpos,
+      wa_jcds       TYPE ty_jcds,
+      wa_tj02t      TYPE ty_tj02t,
+      wa_tstct      TYPE ty_tstct,
+      wa_fieldcatc  TYPE lvc_s_fcat,
+      wa_reporte    TYPE zes_audit_trail.
+
+*  ALV con clases
+  DATA:
+        og_custom_container TYPE REF TO cl_gui_custom_container,
+        og_container        TYPE scrfname VALUE 'CONTROL',
+        og_grid             TYPE REF TO cl_gui_alv_grid,
+        sg_layoutc          TYPE lvc_s_layo.
+
+*  Variables globales
+  DATA:
+        vg_okcode TYPE sy-ucomm.
+
+  SELECTION-SCREEN: BEGIN OF BLOCK blk1 WITH FRAME TITLE TEXT-001.
+
+    PARAMETERS:
+    p_mat         RADIOBUTTON GROUP rdg USER-COMMAND pucomm DEFAULT 'X',  " Para modificaciones en materiales.
+    p_lmat        RADIOBUTTON GROUP rdg MODIF ID S01,  " Para lista de materiales. Exclusivo 120,300 y 500
+    p_receta      RADIOBUTTON GROUP rdg MODIF ID S02,  " Para recetas. Exclusivo 120,300 y 500
+    p_ordpro      RADIOBUTTON GROUP rdg MODIF ID S03,  " Para ordenes de proceso. Exclusivo 120,300 y 500
+    p_linsp       RADIOBUTTON GROUP rdg MODIF ID S04,  " Para lotes de inspección. Exclusivo 12,300 y 500
+    p_lotes       RADIOBUTTON GROUP rdg,  " Para lotes de material.
+    p_clt         RADIOBUTTON GROUP rdg,  " Para clientes.
+    p_prov        RADIOBUTTON GROUP rdg,  " Para Proveedores.
+    p_comp        RADIOBUTTON GROUP rdg,  " Para Compras.
+    p_vtas        RADIOBUTTON GROUP rdg,  " Para Ventas.
+    p_rinfo       RADIOBUTTON GROUP rdg.  " Para registros info.
+
+  SELECTION-SCREEN: END OF BLOCK blk1.
+
+  SELECTION-SCREEN: BEGIN OF BLOCK blk2 WITH FRAME TITLE TEXT-002.
+
+    SELECT-OPTIONS:
+      so_matnr    FOR mara-matnr          NO INTERVALS NO-EXTENSION MODIF ID ID1,  " Para materiales.
+      so_stlnr    FOR stko-stlnr          NO INTERVALS NO-EXTENSION MODIF ID ID2,  " Para lista de materiales.
+      so_plnnr    FOR plmk-plnnr          NO INTERVALS NO-EXTENSION MODIF ID ID3,  " Para recetas.
+      so_aufnr    FOR afko-aufnr          NO INTERVALS NO-EXTENSION MODIF ID ID4,  " Para ordenes de proceso.
+      so_kunnr    FOR kna1-kunnr          NO INTERVALS NO-EXTENSION MODIF ID ID5,  " Para clientes.
+      so_lifnr    FOR lfa1-lifnr          NO INTERVALS NO-EXTENSION MODIF ID ID6,  " Para proveedores.
+      so_ebeln    FOR ekko-ebeln          NO INTERVALS NO-EXTENSION MODIF ID ID7,  " Para docs. de compras.
+      so_vbeln    FOR vbak-vbeln          NO INTERVALS NO-EXTENSION MODIF ID ID8,  " Para docs. de venta.
+      so_pruef    FOR qals-prueflos       NO INTERVALS NO-EXTENSION MODIF ID ID9,  " Para lotes de inspección.
+      so_charg    FOR mcha-charg          NO INTERVALS NO-EXTENSION MODIF ID I10,  " Para lotes de material.
+      so_udate    FOR wa_cdhdr-udate,                                              " Fecha de modificación.
+      so_user     FOR wa_cdhdr-username   NO INTERVALS NO-EXTENSION.               " Usuario.
+
+  SELECTION-SCREEN: END OF BLOCK blk2.
+
+  AT SELECTION-SCREEN OUTPUT.
+
+  LOOP AT SCREEN.
+
+    IF SY-MANDT <> 120 AND SY-MANDT <> 300 AND SY-MANDT <> 500. " Ocultar parámetros de selección exclusivos para 500.
+
+      IF SCREEN-GROUP1 = 'S01'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'S02'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'S03'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'S04'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ENDIF.
+
+    IF p_mat = 'X'. " Para materiales.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_lmat = 'X'. " Para lista de materiales.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_receta = 'X'. " Para recetas.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_clt = 'X'. " Para clientes.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_prov = 'X'. " Para proveedores
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_comp = 'X'. " Docs. de compra
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_vtas = 'X'. " Docs. de venta.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_ordpro = 'X'. " Ordenes de proceso.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_linsp = 'X'. " Lotes de Inspección.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_lotes = 'X'. " Lotes de material.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ELSEIF p_rinfo = 'X'. " Registros info.
+
+      IF SCREEN-GROUP1 = 'ID1'.
+        SCREEN-ACTIVE = 1.
+        SCREEN-INVISIBLE = 0.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID2'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID3'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID4'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID5'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID6'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID7'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID8'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'ID9'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+      IF SCREEN-GROUP1 = 'I10'.
+        SCREEN-ACTIVE = 0.
+        SCREEN-INVISIBLE = 1.
+        MODIFY SCREEN.
+        CONTINUE.
+      ENDIF.
+
+    ENDIF.
+  ENDLOOP.
