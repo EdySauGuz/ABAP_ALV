@@ -1,0 +1,1008 @@
+*&---------------------------------------------------------------------*
+*& Include          ZRE_AUDIT_TRAIL_F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*& Form F_OBTENER_DATOS
+*&---------------------------------------------------------------------*
+*& Selección de datos para reporte ALV.
+*&---------------------------------------------------------------------*
+
+FORM f_obtener_datos .
+*  Variable para consulta con LIKE.
+  DATA: vl_so   TYPE STRING,
+        vl_so2  TYPE STRING.
+
+  IF p_mat = 'X'. " Materiales.
+
+*    Validar si hay valor en so_matnr.
+    IF so_matnr-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_matnr-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'MATERIAL'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_lmat = 'X'. " Lista de Materiales.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_stlnr-low IS NOT INITIAL.
+      CLEAR vl_so.
+      CONCATENATE '%' so_stlnr-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'STUE'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_receta = 'X'. " Recetas.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_plnnr-low IS NOT INITIAL.
+      CLEAR vl_so.
+      CONCATENATE '%' so_plnnr-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'PLAN'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_clt = 'X'. " Clientes.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_kunnr-low IS NOT INITIAL.
+      CLEAR vl_so.
+      CONCATENATE '%' so_kunnr-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'DEBI'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_prov = 'X'. " Proveedores.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_lifnr-low IS NOT INITIAL.
+      CLEAR vl_so.
+      CONCATENATE '%' so_lifnr-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'KRED'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_comp = 'X'. " Docs. de compra
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_ebeln-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_ebeln-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'EINKBELEG'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_vtas = 'X'. " Docs. de venta.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_vbeln-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_vbeln-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'VERKBELEG'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_ordpro = 'X'. " Ordenes de proceso.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_aufnr-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_aufnr-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'ORDER'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+*    Obtener docs. de modif. por estatus.
+    SELECT  objnr
+            stat
+            usnam
+            udate
+            utime
+            cdtcode
+            inact
+            chind
+    FROM jcds
+    INTO TABLE tg_jcds
+    WHERE objnr LIKE 'OR%'
+    AND   objnr LIKE vl_so
+    AND   udate IN so_udate
+    AND   usnam IN so_user.
+
+    IF sy-subrc = 0.
+      SORT  tg_jcds
+      BY    udate
+            utime.
+    ENDIF.
+
+*    Obtener textos de estatus.
+    IF tg_jcds IS NOT INITIAL.
+
+      SELECT  istat
+              txt04
+              txt30
+      FROM tj02t
+      INTO TABLE tg_tj02t
+      FOR ALL ENTRIES IN tg_jcds
+      WHERE istat = tg_jcds-stat
+      AND spras = sy-langu.
+
+      SELECT  tcode
+              ttext
+      FROM tstct
+      INTO TABLE tg_tstct
+      FOR ALL ENTRIES IN tg_jcds
+      WHERE tcode = tg_jcds-cdtcode
+      AND sprsl = sy-langu.
+
+    ENDIF.
+
+  ELSEIF p_linsp = 'X'. " Lotes de Inspección.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_pruef-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_pruef-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'QPRUEFLOS'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_lotes = 'X'. " Lotes por material
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_charg-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_charg-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+    IF so_matnr-low IS NOT INITIAL.
+      CLEAR:  vl_so2.
+
+      CONCATENATE '%' so_matnr-low '%' INTO vl_so2.
+    ELSE.
+      CLEAR:  vl_so2.
+
+      vl_so2 = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    INTO TABLE tg_cdhdr
+    WHERE objectclas = 'CHARGE_LM'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   objectid LIKE vl_so2
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ELSEIF p_rinfo = 'X'. " Registros info.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_matnr-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_matnr-low INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+*    Obtener datos de cabecera de Docs. de modificación
+    SELECT  c~objectclas,
+            c~objectid,
+            c~changenr,
+            c~username,
+            c~udate,
+            c~utime,
+            c~tcode,
+            c~change_ind
+    FROM cdhdr AS c
+    LEFT JOIN eina AS a
+    ON a~infnr = c~objectid
+    INTO TABLE @tg_cdhdr
+    WHERE c~objectclas = 'INFOSATZ'
+    AND   c~change_ind = 'U'
+    AND   a~matnr IN @so_matnr
+    AND   udate IN @so_udate
+    AND   username IN @so_user.
+
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    APPENDING TABLE tg_cdhdr
+    WHERE objectclas = 'SD_KNMT'
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+*    Validar si hay valor en so_XXXXX.
+    IF so_matnr-low IS NOT INITIAL.
+      CLEAR:  vl_so.
+
+      CONCATENATE '%' so_matnr-low '%' INTO vl_so.
+    ELSE.
+      CLEAR:  vl_so.
+
+      vl_so = '%'.
+    ENDIF.
+
+    SELECT  objectclas
+            objectid
+            changenr
+            username
+            udate
+            utime
+            tcode
+            change_ind
+    FROM cdhdr
+    APPENDING TABLE tg_cdhdr
+    WHERE ( objectclas = 'QINF' OR objectclas = 'QINF_S4H' OR objectclas = 'QVDM' OR objectclas = 'QVDM_S4H' )
+    AND   change_ind = 'U'
+    AND   objectid LIKE vl_so
+    AND   udate IN so_udate
+    AND   username IN so_user.
+
+    IF sy-subrc = 0.
+      SORT tg_cdhdr
+      BY udate
+         utime.
+    ENDIF.
+
+    IF tg_cdhdr IS NOT INITIAL.
+
+*      Obtener datos de posición de Docs. de modif.
+      SELECT  objectclas
+              objectid
+              changenr
+              tabname
+              tabkey
+              fname
+              chngind
+              unit_old
+              cuky_old
+              value_old
+              unit_new
+              cuky_new
+              value_new
+      FROM cdpos
+      INTO TABLE tg_cdpos
+      FOR ALL ENTRIES IN tg_cdhdr
+      WHERE changenr  = tg_cdhdr-changenr.
+*      AND   chngind   = tg_cdhdr-change_ind.
+
+    ENDIF.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form F_LLENAR_REPORTE
+*&---------------------------------------------------------------------*
+*& Mover datos de tablas internas a reporte ALV.
+*&---------------------------------------------------------------------*
+
+FORM f_llenar_reporte .
+
+  DATA:
+        tl_dfies  TYPE STANDARD TABLE OF DFIES,
+        wl_dfies  TYPE DFIES,
+*        tl_dd02v  LIKE DD02V,
+        wl_dd02v  LIKE DD02V,
+        vl_accion TYPE c LENGTH 50.
+
+  LOOP AT tg_cdpos
+  INTO wa_cdpos.
+
+*    Limpiar tablas internas.
+    CLEAR:
+    wa_cdhdr,
+    tl_dfies,
+    wl_dfies,
+*    tl_dd02v,
+    wl_dd02v,
+    vl_accion,
+    wa_reporte.
+
+*    Obtener datos de cabecera de Docs. de modif.
+    READ TABLE tg_cdhdr
+    INTO wa_cdhdr
+    WITH KEY changenr = wa_cdpos-changenr.
+
+*    Obtener texto de campo.
+    CALL FUNCTION 'DDIF_FIELDINFO_GET'
+      EXPORTING
+       tabname              = wa_cdpos-tabname
+       FIELDNAME            = wa_cdpos-fname
+       LANGU                = SY-LANGU
+*       LFIELDNAME           = ' '
+*       ALL_TYPES            = ' '
+*       GROUP_NAMES          = ' '
+*       UCLEN                =
+*       DO_NOT_WRITE         = ' '
+*     IMPORTING
+*       X030L_WA             =
+*       DDOBJTYPE            =
+*       DFIES_WA             =
+*       LINES_DESCR          =
+     TABLES
+       DFIES_TAB            = tl_dfies
+*       FIXED_VALUES         =
+     EXCEPTIONS
+       NOT_FOUND            = 1
+       INTERNAL_ERROR       = 2
+       OTHERS               = 3.
+
+    READ TABLE tl_dfies
+    INTO wl_dfies
+    INDEX 1.
+
+    IF wl_dfies-fieldtext IS INITIAL.
+      CALL FUNCTION 'DDIF_TABL_GET'
+        EXPORTING
+         name                = wa_cdpos-tabname
+         STATE               = 'A'
+         LANGU               = SY-LANGU
+       IMPORTING
+         DD02V_WA            = wl_dd02v
+       EXCEPTIONS
+         ILLEGAL_INPUT       = 1
+         OTHERS              = 2.
+
+*      READ TABLE tl_dd02v
+*      INTO wl_dd02v
+*      INDEX 1.
+*      Mover texto descriptivo de tabla a reporte-valor_txt.
+      MOVE wl_dd02v-ddtext  TO wa_reporte-valor_txt.
+    ELSE.
+*      Mover texto descriptivo de campo a reporte-valor_txt.
+      MOVE wl_dfies-fieldtext  TO wa_reporte-valor_txt.
+    ENDIF.
+
+    CASE wa_cdpos-chngind.
+      WHEN 'U'.
+        vl_accion = 'Modificación'.
+      WHEN 'I'.
+        vl_accion = 'Insertar'.
+      WHEN 'D'.
+        vl_accion = 'Borrar'.
+      WHEN 'E'.
+        vl_accion = 'Borrar (documentación campo individual)'.
+      WHEN 'J'.
+        vl_accion = 'Insertar (documentación campo individual)'.
+    ENDCASE.
+
+*    Mover datos a reporte.
+    MOVE:
+    wa_cdhdr-udate      TO wa_reporte-udate,
+    wa_cdhdr-utime      TO wa_reporte-utime,
+    vl_accion           TO wa_reporte-accion,
+    wa_cdhdr-username   TO wa_reporte-username,
+    wa_cdhdr-tcode      TO wa_reporte-tcode,
+    wa_cdpos-unit_old   TO wa_reporte-unit_old,
+    wa_cdpos-cuky_old   TO wa_reporte-cuky_old,
+    wa_cdpos-value_old  TO wa_reporte-value_old,
+    wa_cdpos-unit_new   TO wa_reporte-unit_new,
+    wa_cdpos-cuky_new   TO wa_reporte-cuky_new,
+    wa_cdpos-value_new  TO wa_reporte-value_new.
+
+    APPEND wa_reporte TO tg_reporte.
+
+  ENDLOOP.
+
+*  Mover datos de Docs. de modif. de estatus.
+  IF p_ordpro = 'X'. " Ordenes de proceso.
+
+    LOOP AT tg_jcds
+    INTO wa_jcds.
+
+*      Limpiar tablas internas.
+      CLEAR:
+      vl_accion,
+      wa_tj02t,
+      wa_tstct,
+      wa_reporte.
+
+*      Obteniendo texto de estatus.
+      READ TABLE tg_tj02t
+      INTO wa_tj02t
+      WITH KEY istat = wa_jcds-stat.
+
+*      Obteniendo texto de tcode.
+      READ TABLE tg_tstct
+      INTO wa_tstct
+      WITH KEY tcode = wa_jcds-cdtcode.
+
+*      Asignando texto de acción.
+      CASE wa_jcds-chind.
+        WHEN 'U'.
+          vl_accion = 'Modificación'.
+        WHEN 'I'.
+          vl_accion = 'Insertar'.
+      ENDCASE.
+
+      IF wa_jcds-chind = 'U' AND wa_jcds-inact = 'X'.
+        vl_accion = 'Borrado'.
+      ENDIF.
+
+*      Mover datos a reporte.
+      MOVE:
+      wa_jcds-udate TO wa_reporte-udate,
+      wa_jcds-utime TO wa_reporte-utime,
+      vl_accion     TO wa_reporte-accion,
+      wa_jcds-usnam TO wa_reporte-username,
+      wa_jcds-cdtcode TO wa_reporte-tcode.
+
+      CONCATENATE 'Asig. de Estatus a Orden de Proceso' wa_jcds-objnr+2(12) '-' wa_tstct-ttext INTO wa_reporte-valor_txt SEPARATED BY space.
+
+      CONCATENATE wa_tj02t-txt04 '-' wa_tj02t-txt30 INTO wa_reporte-value_new SEPARATED BY space.
+
+      APPEND wa_reporte TO tg_reporte.
+
+    ENDLOOP.
+
+    SORT  tg_reporte
+    BY    udate
+          utime.
+
+  ENDIF.
+
+  tg_alv[] = tg_reporte[].
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form F_IMPRIMIR_REPORTE
+*&---------------------------------------------------------------------*
+
+FORM f_imprimir_reporte .
+
+  IF tg_reporte[] IS INITIAL.
+    MESSAGE TEXT-003
+    TYPE 'S'
+    DISPLAY LIKE 'E'.
+  ELSE.
+    CALL SCREEN 0001.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form ARMAR_CATALOGO_CAMPOS
+*&---------------------------------------------------------------------*
+
+FORM armar_catalogo_campos  USING pv_estructura_alv TYPE dd02l-tabname
+                            CHANGING pt_fieldcatc   TYPE lvc_t_fcat.
+
+*  Obtener catalogo de campos.
+  CALL FUNCTION 'LVC_FIELDCATALOG_MERGE'
+    EXPORTING
+*     I_BUFFER_ACTIVE        =
+      i_structure_name       = pv_estructura_alv
+*     I_CLIENT_NEVER_DISPLAY = 'X'
+*     I_BYPASSING_BUFFER     =
+*     I_INTERNAL_TABNAME     =
+    CHANGING
+      ct_fieldcat            = pt_fieldcatc
+    EXCEPTIONS
+      inconsistent_interface = 1
+      program_error          = 2
+      OTHERS                 = 3.
+
+  IF sy-subrc <> 0.
+
+    MESSAGE ID sy-msgid
+    TYPE  sy-msgty
+    NUMBER sy-msgno
+    WITH  sy-msgv1
+          sy-msgv2
+          sy-msgv3
+          sy-msgv4.
+
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form F_DEFINIR_LAYOUT_ALV
+*&---------------------------------------------------------------------*
+
+FORM f_definir_layout_alv .
+
+  sg_layoutc-sel_mode   = 'D'. " Modo de selección.
+  sg_layoutc-zebra      = 'X'. " Vista de filas.
+  sg_layoutc-cwidth_opt = 'X'. " Barra de opciones.
+
+ENDFORM.
